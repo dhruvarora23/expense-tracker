@@ -1,4 +1,4 @@
-const CACHE_NAME = 'expense-tracker-v3';
+const CACHE_NAME = 'expense-tracker-v4';
 const APP_SHELL = ['./index.html', './style.css', './app.js', './manifest.json'];
 
 self.addEventListener('install', (event) => {

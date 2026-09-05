@@ -1,7 +1,5 @@
-// Your PC's local Wi-Fi IP, so your iPhone (on the same network) can reach
-// the backend. Change this once you deploy the backend somewhere public
-// (see README) — at that point it stops depending on being on the same Wi-Fi.
-const API_BASE = 'http://192.168.1.4:3000';
+// Deployed backend on Render — works from anywhere, not just home Wi-Fi.
+const API_BASE = 'https://expense-tracker-7vtl.onrender.com';
 
 // Must match the API_KEY the backend was started with, and the value used
 // in the iPhone Shortcut's "x-api-key" header. Since this is a personal,
