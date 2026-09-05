@@ -13,6 +13,10 @@
   box-sizing: border-box;
 }
 
+html, body {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -22,20 +26,50 @@ body {
 
 .app {
   max-width: 480px;
+  width: 100%;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding:
+    max(28px, calc(env(safe-area-inset-top) + 16px))
+    max(16px, env(safe-area-inset-right))
+    calc(88px + env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+}
+
+.view[hidden] {
+  display: none;
 }
 
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 16px;
 }
 
 .app-header h1 {
   font-size: 22px;
   margin: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.header-spacer {
+  width: 36px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid #2e3340;
+  border-radius: 8px;
+  font-size: 17px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cycle-nav {
@@ -64,6 +98,29 @@ body {
   text-align: center;
 }
 
+.range-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.range-btn {
+  flex: 1;
+  background: var(--surface);
+  color: var(--text-dim);
+  border: 1px solid #2e3340;
+  border-radius: 10px;
+  padding: 10px 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.range-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
 .total-card {
   background: var(--surface);
   border-radius: var(--radius);
@@ -72,6 +129,10 @@ body {
   flex-direction: column;
   gap: 4px;
   margin-bottom: 20px;
+}
+
+.total-card[hidden] {
+  display: none;
 }
 
 .total-label {
@@ -84,31 +145,83 @@ body {
   font-weight: 700;
 }
 
-.add-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 20px;
+.expense-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.add-form input {
+.expense-groups[hidden] {
+  display: none;
+}
+
+.date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.date-badge {
+  display: inline-block;
+  align-self: flex-start;
+  background: #1c2a4a;
+  color: #a9c0f5;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+
+.track-display {
+  text-align: center;
+  margin: 12px 0 16px;
+}
+
+.track-amount {
+  font-size: 44px;
+  font-weight: 700;
+}
+
+.track-note-input {
+  width: 100%;
   background: var(--surface);
   border: 1px solid #2e3340;
   color: var(--text);
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 15px;
+  margin-bottom: 16px;
 }
 
-.add-form button {
-  grid-column: 1 / -1;
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.keypad button {
+  background: var(--surface);
+  border: 1px solid #2e3340;
+  color: var(--text);
+  font-size: 22px;
+  padding: 18px 0;
+  border-radius: 12px;
+}
+
+.keypad button:active {
+  background: #262b38;
+}
+
+.track-submit-btn {
+  width: 100%;
   background: var(--accent);
   color: white;
   border: none;
-  padding: 12px;
+  padding: 14px;
   border-radius: 10px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .expense-list {
@@ -120,6 +233,10 @@ body {
   gap: 8px;
 }
 
+.expense-list[hidden] {
+  display: none;
+}
+
 .expense-item {
   background: var(--surface);
   border-radius: 10px;
@@ -127,11 +244,20 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
 }
 
 .expense-item .meta {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.expense-item > div:last-child {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .expense-item .category {
@@ -160,4 +286,105 @@ body {
   color: var(--text-dim);
   font-size: 13px;
   min-height: 18px;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid #2e3340;
+  padding: 6px max(16px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  z-index: 10;
+}
+
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 11px;
+  padding: 6px 0;
+}
+
+.nav-btn.active {
+  color: var(--accent);
+}
+
+.nav-icon {
+  font-size: 20px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  padding: 16px;
+}
+
+.modal-overlay:not([hidden]) {
+  display: flex;
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.modal label {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.modal input {
+  background: var(--bg);
+  border: 1px solid #2e3340;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  width: 100%;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.modal-actions button {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  background: var(--accent);
+}
+
+.modal-actions button.secondary {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid #2e3340;
 }

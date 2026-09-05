@@ -49,16 +49,19 @@ On your iPhone, open that same URL in Safari, tap the Share icon, and choose
 
 1. Open the **Shortcuts** app → **+** to create a new shortcut
 2. Add action **"Ask for Input"** → Input Type: `Number` → Prompt: `Amount`
-3. (Optional) Add **"Choose from Menu"** → list your categories (Food, Transport, etc.)
+3. Add another **"Ask for Input"** → Input Type: `Text` → Prompt: `Note`
+   (optional per entry — e.g. "coffee", "cab" — leave blank and just save if
+   you don't want to type anything)
 4. Add action **"Get Contents of URL"**:
    - URL: `http://<your-backend-url>/api/expenses`
    - Method: `POST`
    - Headers: `Content-Type: application/json`, `x-api-key: exp-tracker-9f3a2c1d7e`
    - Request Body: JSON —
      ```json
-     { "amount": Provided Input, "category": Provided Input }
+     { "amount": <Ask for Input (Amount)>, "note": <Ask for Input (Note)> }
      ```
-     (use the blue variable chips from the previous steps instead of typing these)
+     (tap each value box and pick the matching "Ask for Input" chip — there'll
+     be two, one per prompt, so make sure each field points to the right one)
 5. (Optional) Add **"Show Notification"** → "Expense saved"
 6. Name the shortcut (e.g. "Log Expense")
 7. Go to **Settings → Accessibility → Touch → Back Tap → Double Tap** → select

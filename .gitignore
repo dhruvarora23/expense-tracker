@@ -1,8 +1,3 @@
 node_modules/
 .env
 *.log
-
-# Your actual expense data shouldn't be versioned — it changes constantly
-# and it's personal financial data, not code. server.js recreates this file
-# automatically if it's missing.
-backend/data/expenses.json

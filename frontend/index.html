@@ -13,33 +13,119 @@
 </head>
 <body>
   <main class="app">
-    <header class="app-header">
-      <h1>Expenses</h1>
-    </header>
+    <section id="view-history" class="view">
+      <header class="app-header">
+        <button class="icon-btn settings-btn" type="button" aria-label="Settings">⚙️</button>
+        <h1>Expenses</h1>
+        <span class="header-spacer"></span>
+      </header>
 
-    <div class="cycle-nav">
-      <button id="prev-cycle" type="button" aria-label="Previous pay cycle">‹</button>
-      <span id="cycle-label" class="cycle-label"></span>
-      <button id="next-cycle" type="button" aria-label="Next pay cycle">›</button>
-    </div>
+      <div class="cycle-nav">
+        <button id="prev-cycle" type="button" aria-label="Previous pay cycle">‹</button>
+        <span id="cycle-label" class="cycle-label"></span>
+        <button id="next-cycle" type="button" aria-label="Next pay cycle">›</button>
+      </div>
 
-    <section class="total-card">
-      <span class="total-label">Total this pay cycle</span>
-      <span id="total-amount" class="total-amount">₹0.00</span>
+      <section class="total-card">
+        <span class="total-label">Total this pay cycle</span>
+        <span id="total-amount" class="total-amount">₹0.00</span>
+      </section>
+
+      <div id="expense-list" class="expense-groups"></div>
+
+      <p id="status-message" class="status-message"></p>
     </section>
 
-    <form id="add-form" class="add-form">
-      <input id="amount" type="number" step="0.01" min="0" placeholder="Amount" required />
-      <input id="category" type="text" placeholder="Category (optional)" />
-      <input id="note" type="text" placeholder="Note (optional)" />
-      <input id="date" type="date" />
-      <button type="submit">Add expense</button>
-    </form>
+    <section id="view-track" class="view" hidden>
+      <header class="app-header">
+        <button class="icon-btn settings-btn" type="button" aria-label="Settings">⚙️</button>
+        <h1>Track</h1>
+        <span class="header-spacer"></span>
+      </header>
 
-    <ul id="expense-list" class="expense-list"></ul>
+      <div class="track-display">
+        <span id="track-amount-display" class="track-amount">₹0</span>
+      </div>
 
-    <p id="status-message" class="status-message"></p>
+      <input id="track-note" type="text" class="track-note-input" placeholder="+ Add note" />
+
+      <div class="keypad">
+        <button type="button" data-key="1">1</button>
+        <button type="button" data-key="2">2</button>
+        <button type="button" data-key="3">3</button>
+        <button type="button" data-key="4">4</button>
+        <button type="button" data-key="5">5</button>
+        <button type="button" data-key="6">6</button>
+        <button type="button" data-key="7">7</button>
+        <button type="button" data-key="8">8</button>
+        <button type="button" data-key="9">9</button>
+        <button type="button" data-key=".">.</button>
+        <button type="button" data-key="0">0</button>
+        <button type="button" data-key="back">⌫</button>
+      </div>
+
+      <button id="track-submit" class="track-submit-btn" type="button">Track</button>
+
+      <p id="track-status" class="status-message"></p>
+    </section>
+
+    <section id="view-analytics" class="view" hidden>
+      <header class="app-header">
+        <button class="icon-btn settings-btn" type="button" aria-label="Settings">⚙️</button>
+        <h1>Spending</h1>
+        <span class="header-spacer"></span>
+      </header>
+
+      <div class="range-tabs">
+        <button class="range-btn" data-range="week" type="button">This Week</button>
+        <button class="range-btn" data-range="month" type="button">This Month</button>
+        <button class="range-btn" data-range="year" type="button">This Year</button>
+      </div>
+
+      <p id="analytics-range-label" class="cycle-label"></p>
+
+      <section class="total-card">
+        <span id="analytics-total-label" class="total-label">Spent this week</span>
+        <span id="analytics-total-amount" class="total-amount">₹0.00</span>
+      </section>
+
+      <section id="analytics-budget-card" class="total-card" hidden>
+        <span class="total-label">Budget left</span>
+        <span id="analytics-budget-left" class="total-amount">₹0.00</span>
+      </section>
+
+      <ul id="analytics-monthly-list" class="expense-list" hidden></ul>
+    </section>
   </main>
+
+  <nav class="bottom-nav">
+    <button id="tab-history" class="nav-btn" data-view="history" type="button">
+      <span class="nav-icon">🕘</span>
+      <span>History</span>
+    </button>
+    <button id="tab-track" class="nav-btn" data-view="track" type="button">
+      <span class="nav-icon">➕</span>
+      <span>Track</span>
+    </button>
+    <button id="tab-analytics" class="nav-btn" data-view="analytics" type="button">
+      <span class="nav-icon">📊</span>
+      <span>Analytics</span>
+    </button>
+  </nav>
+
+  <div id="settings-modal" class="modal-overlay" hidden>
+    <div class="modal">
+      <h2>Settings</h2>
+      <label for="budget-input">Monthly budget (₹)</label>
+      <input id="budget-input" type="number" min="0" step="0.01" placeholder="e.g. 20000" />
+      <label for="salary-input">In-hand salary (₹)</label>
+      <input id="salary-input" type="number" min="0" step="0.01" placeholder="e.g. 45000" />
+      <div class="modal-actions">
+        <button id="settings-cancel" type="button" class="secondary">Cancel</button>
+        <button id="settings-save" type="button">Save</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

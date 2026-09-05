@@ -1,29 +1,16 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY || 'change-me-please';
-const DATA_FILE = path.join(__dirname, 'data', 'expenses.json');
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 app.use(cors());
 app.use(express.json());
-
-function readExpenses() {
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-    fs.writeFileSync(DATA_FILE, '[]');
-  }
-  const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-  return JSON.parse(raw || '[]');
-}
-
-function writeExpenses(expenses) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(expenses, null, 2));
-}
 
 // Pay-cycle logic: "months" here run 7th -> 6th of the next month (payday),
 // not calendar months. A cycle is identified by its start date, e.g. a date
@@ -63,28 +50,30 @@ app.get('/api/health', (req, res) => {
 // GET /api/expenses?start=2026-09-07&end=2026-10-06  -> list + total for that
 //   date range (inclusive). Used for pay-cycle views.
 // GET /api/expenses                                  -> everything
-app.get('/api/expenses', (req, res) => {
+app.get('/api/expenses', async (req, res) => {
   const { start, end } = req.query;
-  let expenses = readExpenses();
 
+  let query = supabase.from('expenses').select('*').order('date', { ascending: false });
   if (start && end) {
-    expenses = expenses.filter((e) => e.date >= start && e.date <= end);
+    query = query.gte('date', start).lte('date', end);
   }
 
-  expenses.sort((a, b) => (a.date < b.date ? 1 : -1));
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
 
-  res.json({ expenses, total, count: expenses.length });
+  const total = data.reduce((sum, e) => sum + Number(e.amount), 0);
+  res.json({ expenses: data, total, count: data.length });
 });
 
 // GET /api/expenses/summary -> total spent per pay cycle, for a "history" view
-app.get('/api/expenses/summary', (req, res) => {
-  const expenses = readExpenses();
-  const byCycle = {};
+app.get('/api/expenses/summary', async (req, res) => {
+  const { data, error } = await supabase.from('expenses').select('amount, date');
+  if (error) return res.status(500).json({ error: error.message });
 
-  for (const e of expenses) {
+  const byCycle = {};
+  for (const e of data) {
     const cycleStart = cycleStartForDate(e.date);
-    byCycle[cycleStart] = (byCycle[cycleStart] || 0) + e.amount;
+    byCycle[cycleStart] = (byCycle[cycleStart] || 0) + Number(e.amount);
   }
 
   const summary = Object.entries(byCycle)
@@ -94,38 +83,37 @@ app.get('/api/expenses/summary', (req, res) => {
   res.json({ summary });
 });
 
-app.post('/api/expenses', requireApiKey, (req, res) => {
-  const { amount, category, date, note } = req.body;
+app.post('/api/expenses', requireApiKey, async (req, res) => {
+  const { amount, date, note } = req.body;
 
   if (typeof amount !== 'number' || Number.isNaN(amount)) {
     return res.status(400).json({ error: 'amount must be a number' });
   }
 
   const expense = {
-    id: crypto.randomUUID(),
     amount,
-    category: category || 'Uncategorized',
     note: note || '',
     date: date || new Date().toISOString().slice(0, 10), // "YYYY-MM-DD"
-    createdAt: new Date().toISOString(),
   };
 
-  const expenses = readExpenses();
-  expenses.push(expense);
-  writeExpenses(expenses);
+  const { data, error } = await supabase.from('expenses').insert(expense).select().single();
+  if (error) return res.status(500).json({ error: error.message });
 
-  res.status(201).json(expense);
+  res.status(201).json(data);
 });
 
-app.delete('/api/expenses/:id', requireApiKey, (req, res) => {
-  const expenses = readExpenses();
-  const filtered = expenses.filter((e) => e.id !== req.params.id);
+app.delete('/api/expenses/:id', requireApiKey, async (req, res) => {
+  const { data, error } = await supabase
+    .from('expenses')
+    .delete()
+    .eq('id', req.params.id)
+    .select();
 
-  if (filtered.length === expenses.length) {
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data || data.length === 0) {
     return res.status(404).json({ error: 'Expense not found' });
   }
 
-  writeExpenses(filtered);
   res.status(204).send();
 });
 
