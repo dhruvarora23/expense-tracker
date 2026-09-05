@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Expense Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#111318" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <h1>Expenses</h1>
+    </header>
+
+    <div class="cycle-nav">
+      <button id="prev-cycle" type="button" aria-label="Previous pay cycle">‹</button>
+      <span id="cycle-label" class="cycle-label"></span>
+      <button id="next-cycle" type="button" aria-label="Next pay cycle">›</button>
+    </div>
+
+    <section class="total-card">
+      <span class="total-label">Total this pay cycle</span>
+      <span id="total-amount" class="total-amount">₹0.00</span>
+    </section>
+
+    <form id="add-form" class="add-form">
+      <input id="amount" type="number" step="0.01" min="0" placeholder="Amount" required />
+      <input id="category" type="text" placeholder="Category (optional)" />
+      <input id="note" type="text" placeholder="Note (optional)" />
+      <input id="date" type="date" />
+      <button type="submit">Add expense</button>
+    </form>
+
+    <ul id="expense-list" class="expense-list"></ul>
+
+    <p id="status-message" class="status-message"></p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
