@@ -191,22 +191,107 @@ function renderExpenses(expenses, total) {
     }
 
     const li = document.createElement('li');
-    li.className = 'expense-item';
+    li.className = 'expense-item-wrapper';
     li.innerHTML = `
-      <div class="meta">
-        <span class="category">${e.note || 'Expense'}</span>
-      </div>
-      <div>
-        <span class="amount">${formatMoney(e.amount)}</span>
+      <div class="expense-item-actions">
         <button class="delete-btn" data-id="${e.id}">Delete</button>
+      </div>
+      <div class="expense-item">
+        <div class="meta">
+          <span class="category">${e.note || 'Expense'}</span>
+        </div>
+        <div>
+          <span class="amount">${formatMoney(e.amount)}</span>
+        </div>
       </div>
     `;
     currentGroup.appendChild(li);
+
+    const content = li.querySelector('.expense-item');
+    const deleteBtn = li.querySelector('.delete-btn');
+    attachSwipeToDelete(content, deleteBtn);
+  }
+}
+
+// ---- Swipe-to-delete (History list items) -----------------------------------
+
+const SWIPE_REVEAL = 84;
+let openSwipeItem = null;
+
+function closeSwipeItem(el) {
+  el.style.transform = 'translateX(0)';
+  el.dataset.open = 'false';
+  if (openSwipeItem === el) openSwipeItem = null;
+}
+
+function attachSwipeToDelete(contentEl, deleteBtn) {
+  let startX = 0;
+  let startY = 0;
+  let startTranslate = 0;
+  let dragging = false;
+  let isHorizontal = null;
+
+  function currentTranslate() {
+    const match = /translateX\((-?\d+(?:\.\d+)?)px\)/.exec(contentEl.style.transform);
+    return match ? parseFloat(match[1]) : 0;
   }
 
-  expenseList.querySelectorAll('.delete-btn').forEach((btn) => {
-    btn.addEventListener('click', () => deleteExpense(btn.dataset.id));
+  contentEl.addEventListener(
+    'touchstart',
+    (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startTranslate = currentTranslate();
+      dragging = true;
+      isHorizontal = null;
+    },
+    { passive: true }
+  );
+
+  contentEl.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!dragging) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+
+      if (isHorizontal === null) {
+        isHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+      if (!isHorizontal) return;
+
+      e.preventDefault();
+      const next = Math.max(-SWIPE_REVEAL, Math.min(0, startTranslate + dx));
+      contentEl.style.transition = 'none';
+      contentEl.style.transform = `translateX(${next}px)`;
+    },
+    { passive: false }
+  );
+
+  contentEl.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    contentEl.style.transition = '';
+    if (!isHorizontal) return;
+
+    const shouldOpen = currentTranslate() < -SWIPE_REVEAL / 2;
+    if (shouldOpen) {
+      if (openSwipeItem && openSwipeItem !== contentEl) closeSwipeItem(openSwipeItem);
+      contentEl.style.transform = `translateX(-${SWIPE_REVEAL}px)`;
+      contentEl.dataset.open = 'true';
+      openSwipeItem = contentEl;
+    } else {
+      closeSwipeItem(contentEl);
+    }
   });
+
+  // Tapping the content while it's open just closes it, instead of doing
+  // nothing — a natural way to dismiss without hitting the delete button.
+  contentEl.addEventListener('click', () => {
+    if (contentEl.dataset.open === 'true') closeSwipeItem(contentEl);
+  });
+
+  deleteBtn.addEventListener('click', () => deleteExpense(deleteBtn.dataset.id));
 }
 
 async function deleteExpense(id) {

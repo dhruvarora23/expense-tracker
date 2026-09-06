@@ -279,7 +279,32 @@ body {
   display: none;
 }
 
+.expense-item-wrapper {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.expense-item-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 84px;
+  display: flex;
+}
+
+.expense-item-actions .delete-btn {
+  flex: 1;
+  border: none;
+  background: var(--danger);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .expense-item {
+  position: relative;
   background: var(--surface);
   border-radius: 10px;
   padding: 12px 14px;
@@ -287,6 +312,9 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  touch-action: pan-y;
+  transition: transform 0.2s ease;
+  will-change: transform;
 }
 
 .expense-item .meta {
@@ -313,14 +341,6 @@ body {
 
 .expense-item .amount {
   font-weight: 700;
-}
-
-.expense-item .delete-btn {
-  background: none;
-  border: none;
-  color: var(--danger);
-  font-size: 13px;
-  margin-left: 10px;
 }
 
 .status-message {
