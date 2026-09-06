@@ -11,6 +11,7 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html, body {
@@ -281,6 +282,7 @@ body {
 
 .expense-item-wrapper {
   position: relative;
+  background: var(--surface);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -292,6 +294,7 @@ body {
   bottom: 0;
   width: 84px;
   display: flex;
+  background: var(--danger);
 }
 
 .expense-item-actions .delete-btn {
