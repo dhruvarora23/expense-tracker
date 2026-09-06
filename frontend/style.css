@@ -190,7 +190,40 @@ body {
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.track-date-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
   margin-bottom: 16px;
+}
+
+.track-date-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  background: var(--surface);
+  border: 1px solid #2e3340;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.track-date-placeholder {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.track-date-placeholder[hidden] {
+  display: none;
 }
 
 .keypad {

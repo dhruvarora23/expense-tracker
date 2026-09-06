@@ -31,6 +31,8 @@ const statusMessage = document.getElementById('status-message');
 
 const trackAmountDisplay = document.getElementById('track-amount-display');
 const trackNoteInput = document.getElementById('track-note');
+const trackDateInput = document.getElementById('track-date');
+const trackDatePlaceholder = document.getElementById('track-date-placeholder');
 const trackSubmitBtn = document.getElementById('track-submit');
 const trackStatus = document.getElementById('track-status');
 const keypadButtons = document.querySelectorAll('.keypad button');
@@ -257,6 +259,12 @@ function pressBackspace() {
   updateTrackDisplay();
 }
 
+function updateTrackDatePlaceholder() {
+  trackDatePlaceholder.hidden = Boolean(trackDateInput.value);
+}
+
+trackDateInput.addEventListener('input', updateTrackDatePlaceholder);
+
 keypadButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
     const key = btn.dataset.key;
@@ -281,7 +289,11 @@ trackSubmitBtn.addEventListener('click', async () => {
         'Content-Type': 'application/json',
         'x-api-key': API_KEY,
       },
-      body: JSON.stringify({ amount, note: trackNoteInput.value }),
+      body: JSON.stringify({
+        amount,
+        note: trackNoteInput.value,
+        date: trackDateInput.value || undefined,
+      }),
     });
 
     if (!res.ok) {
@@ -291,7 +303,9 @@ trackSubmitBtn.addEventListener('click', async () => {
 
     trackAmountStr = '';
     trackNoteInput.value = '';
+    trackDateInput.value = '';
     updateTrackDisplay();
+    updateTrackDatePlaceholder();
     trackStatus.textContent = 'Saved ✓';
     setTimeout(() => {
       trackStatus.textContent = '';
@@ -423,6 +437,7 @@ settingsSaveBtn.addEventListener('click', () => {
 
 updateRangeButtonsUI();
 updateTrackDisplay();
+updateTrackDatePlaceholder();
 tabHistoryBtn.classList.add('active');
 loadCurrentCycle();
 
