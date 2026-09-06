@@ -195,6 +195,8 @@ body {
 
 .track-date-wrapper {
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
   overflow: hidden;
   border-radius: 10px;
   margin-bottom: 16px;
