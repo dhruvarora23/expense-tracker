@@ -317,6 +317,14 @@ body {
   will-change: transform;
 }
 
+/* Inside the swipeable wrapper, the outer element already clips to rounded
+   corners via overflow: hidden — giving the inner content its own radius
+   too causes the two roundings to not perfectly overlap, letting a sliver
+   of the red delete layer peek through at rest. */
+.expense-item-wrapper .expense-item {
+  border-radius: 0;
+}
+
 .expense-item .meta {
   display: flex;
   flex-direction: column;
