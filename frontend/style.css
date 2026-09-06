@@ -206,10 +206,17 @@ body {
   max-width: 100%;
   background: var(--surface);
   border: 1px solid #2e3340;
-  color: var(--text);
+  color: transparent;
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 15px;
+}
+
+/* Once a date is actually picked, show it — until then its native
+   "dd-mm-yyyy" ghost text stays invisible so it doesn't collide with
+   the "+ Add date" placeholder overlay. */
+.track-date-input.has-value {
+  color: var(--text);
 }
 
 .track-date-placeholder {

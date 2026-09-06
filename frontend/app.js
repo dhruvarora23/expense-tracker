@@ -260,7 +260,9 @@ function pressBackspace() {
 }
 
 function updateTrackDatePlaceholder() {
-  trackDatePlaceholder.hidden = Boolean(trackDateInput.value);
+  const hasValue = Boolean(trackDateInput.value);
+  trackDatePlaceholder.hidden = hasValue;
+  trackDateInput.classList.toggle('has-value', hasValue);
 }
 
 trackDateInput.addEventListener('input', updateTrackDatePlaceholder);
