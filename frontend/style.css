@@ -73,6 +73,18 @@ body {
   justify-content: center;
 }
 
+.cash-cta {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid #2e3340;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 .cycle-nav {
   display: flex;
   align-items: center;
@@ -362,6 +374,67 @@ body {
   color: var(--text-dim);
   font-size: 13px;
   min-height: 18px;
+}
+
+.cash-breakdown {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cash-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.cash-breakdown li span:last-child {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cash-investment-form {
+  margin-bottom: 20px;
+}
+
+.cash-investment-form label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.cash-investment-row {
+  display: flex;
+  gap: 8px;
+}
+
+.cash-investment-row input {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid #2e3340;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.cash-investment-row button {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .bottom-footer {

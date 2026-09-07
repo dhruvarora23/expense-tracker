@@ -102,6 +102,40 @@ app.post('/api/expenses', requireApiKey, async (req, res) => {
   res.status(201).json(data);
 });
 
+// GET /api/investments -> every month's saved investment amount, for the
+//   Cash in Hand page's running-balance calculation
+app.get('/api/investments', async (req, res) => {
+  const { data, error } = await supabase
+    .from('cash_investments')
+    .select('cycle_start, amount')
+    .order('cycle_start', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ investments: data });
+});
+
+// POST /api/investments  { cycleStart, amount }  -> set (create or overwrite)
+//   that month's investment amount
+app.post('/api/investments', requireApiKey, async (req, res) => {
+  const { cycleStart, amount } = req.body;
+
+  if (typeof amount !== 'number' || Number.isNaN(amount)) {
+    return res.status(400).json({ error: 'amount must be a number' });
+  }
+  if (typeof cycleStart !== 'string' || !cycleStart) {
+    return res.status(400).json({ error: 'cycleStart is required' });
+  }
+
+  const { data, error } = await supabase
+    .from('cash_investments')
+    .upsert({ cycle_start: cycleStart, amount, updated_at: new Date().toISOString() }, { onConflict: 'cycle_start' })
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(200).json(data);
+});
+
 app.delete('/api/expenses/:id', requireApiKey, async (req, res) => {
   const { data, error } = await supabase
     .from('expenses')

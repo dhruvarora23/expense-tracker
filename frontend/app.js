@@ -18,9 +18,12 @@ const SALARY_KEY = 'expenseTrackerSalary';
 const viewHistory = document.getElementById('view-history');
 const viewTrack = document.getElementById('view-track');
 const viewAnalytics = document.getElementById('view-analytics');
+const viewCash = document.getElementById('view-cash');
 const tabHistoryBtn = document.getElementById('tab-history');
 const tabTrackBtn = document.getElementById('tab-track');
 const tabAnalyticsBtn = document.getElementById('tab-analytics');
+const openCashBtn = document.getElementById('open-cash-btn');
+const cashBackBtn = document.getElementById('cash-back-btn');
 
 const cycleLabel = document.getElementById('cycle-label');
 const prevCycleBtn = document.getElementById('prev-cycle');
@@ -54,12 +57,28 @@ const salaryInput = document.getElementById('salary-input');
 const settingsSaveBtn = document.getElementById('settings-save');
 const settingsCancelBtn = document.getElementById('settings-cancel');
 
+const prevCashCycleBtn = document.getElementById('prev-cash-cycle');
+const nextCashCycleBtn = document.getElementById('next-cash-cycle');
+const cashCycleLabel = document.getElementById('cash-cycle-label');
+const cashTotalAmount = document.getElementById('cash-total-amount');
+const cashCarried = document.getElementById('cash-carried');
+const cashSalary = document.getElementById('cash-salary');
+const cashInvestmentOut = document.getElementById('cash-investment-out');
+const cashExpensesOut = document.getElementById('cash-expenses-out');
+const cashInvestmentInput = document.getElementById('cash-investment-input');
+const cashInvestmentSaveBtn = document.getElementById('cash-investment-save');
+const cashInvestmentStatus = document.getElementById('cash-investment-status');
+const cashTotalInvested = document.getElementById('cash-total-invested');
+
 // ---- State ---------------------------------------------------------------
 
 // The pay cycle currently on screen in History, tracked as its start date.
 let currentCycleStart = cycleStartForDate(new Date());
 let currentRange = 'week';
 let trackAmountStr = '';
+
+// The pay cycle currently on screen in Cash in Hand.
+let cashCycleStart = cycleStartForDate(new Date());
 
 // ---- Date helpers ----------------------------------------------------------
 
@@ -126,6 +145,12 @@ async function fetchSummary() {
   const res = await fetch(`${API_BASE}/api/expenses/summary`);
   const data = await res.json();
   return data.summary;
+}
+
+async function fetchInvestments() {
+  const res = await fetch(`${API_BASE}/api/investments`);
+  const data = await res.json();
+  return data.investments;
 }
 
 // ---- Budget / salary (stored locally on this device) ------------------------
@@ -482,12 +507,114 @@ rangeButtons.forEach((btn) => {
   });
 });
 
+// ---- Cash in Hand view -------------------------------------------------------
+//
+// Cash in hand is a running ledger, carried forward every pay cycle:
+//   this month's cash = last month's leftover + salary − investment − expenses
+// Salary is always the current Settings value, applied uniformly to every
+// month (per how the user described it — not stored per month). Investment
+// is a single editable number per month, stored in the `cash_investments`
+// table. Expenses reuse the same pay-cycle totals already used elsewhere.
+
+async function loadCash() {
+  const start = cashCycleStart;
+  const end = cycleEndForStart(start);
+  cashCycleLabel.textContent = formatRangeLabel(start, end);
+
+  const [summary, investments] = await Promise.all([fetchSummary(), fetchInvestments()]);
+  const expenseByMonth = new Map(summary.map((s) => [s.cycleStart, s.total]));
+  const investmentByMonth = new Map(investments.map((i) => [i.cycle_start, Number(i.amount)]));
+
+  const salary = getSalary();
+  const targetKey = toISODate(cashCycleStart);
+
+  // Walk forward month by month from the earliest month with any data (or
+  // the target month itself, if there's no data yet) up to the month being
+  // viewed, accumulating the running balance.
+  let cursor = cashCycleStart;
+  const allKeys = [...expenseByMonth.keys(), ...investmentByMonth.keys()];
+  if (allKeys.length > 0) {
+    const earliestKey = allKeys.sort()[0];
+    const earliestDate = new Date(`${earliestKey}T00:00:00`);
+    if (earliestDate < cursor) cursor = earliestDate;
+  }
+
+  let balance = 0;
+  let monthBreakdown = null;
+
+  while (cursor <= cashCycleStart) {
+    const key = toISODate(cursor);
+    const expense = expenseByMonth.get(key) || 0;
+    const investment = investmentByMonth.get(key) || 0;
+    const carriedIn = balance;
+    balance = balance + salary - investment - expense;
+
+    if (key === targetKey) {
+      monthBreakdown = { carriedIn, salary, investment, expense, balance };
+    }
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, PAY_DAY);
+  }
+
+  cashTotalAmount.textContent = formatMoney(monthBreakdown.balance);
+  cashCarried.textContent = formatMoney(monthBreakdown.carriedIn);
+  cashSalary.textContent = formatMoney(monthBreakdown.salary);
+  cashInvestmentOut.textContent = formatMoney(monthBreakdown.investment);
+  cashExpensesOut.textContent = formatMoney(monthBreakdown.expense);
+
+  cashInvestmentInput.value = investmentByMonth.get(targetKey) || '';
+
+  const totalInvested = investments.reduce((sum, i) => sum + Number(i.amount), 0);
+  cashTotalInvested.textContent = formatMoney(totalInvested);
+}
+
+cashInvestmentSaveBtn.addEventListener('click', async () => {
+  const amount = parseFloat(cashInvestmentInput.value) || 0;
+  cashInvestmentStatus.textContent = 'Saving...';
+  try {
+    const res = await fetch(`${API_BASE}/api/investments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+      },
+      body: JSON.stringify({ cycleStart: toISODate(cashCycleStart), amount }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to save');
+    }
+
+    cashInvestmentStatus.textContent = 'Saved ✓';
+    setTimeout(() => {
+      cashInvestmentStatus.textContent = '';
+    }, 1500);
+    loadCash();
+  } catch (err) {
+    cashInvestmentStatus.textContent = err.message;
+  }
+});
+
+prevCashCycleBtn.addEventListener('click', () => {
+  cashCycleStart = new Date(cashCycleStart.getFullYear(), cashCycleStart.getMonth() - 1, PAY_DAY);
+  loadCash();
+});
+
+nextCashCycleBtn.addEventListener('click', () => {
+  cashCycleStart = new Date(cashCycleStart.getFullYear(), cashCycleStart.getMonth() + 1, PAY_DAY);
+  loadCash();
+});
+
+openCashBtn.addEventListener('click', () => setActiveView('cash'));
+cashBackBtn.addEventListener('click', () => setActiveView('history'));
+
 // ---- Bottom tab navigation ---------------------------------------------------
 
 function setActiveView(view) {
   viewHistory.hidden = view !== 'history';
   viewTrack.hidden = view !== 'track';
   viewAnalytics.hidden = view !== 'analytics';
+  viewCash.hidden = view !== 'cash';
   budgetLeftBar.hidden = view !== 'history';
   tabHistoryBtn.classList.toggle('active', view === 'history');
   tabTrackBtn.classList.toggle('active', view === 'track');
@@ -495,6 +622,7 @@ function setActiveView(view) {
 
   if (view === 'history') loadCurrentCycle();
   if (view === 'analytics') loadAnalytics();
+  if (view === 'cash') loadCash();
 }
 
 tabHistoryBtn.addEventListener('click', () => setActiveView('history'));

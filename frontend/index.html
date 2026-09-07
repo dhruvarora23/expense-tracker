@@ -17,7 +17,7 @@
       <header class="app-header">
         <button class="icon-btn settings-btn" type="button" aria-label="Settings">⚙️</button>
         <h1>Expenses</h1>
-        <span class="header-spacer"></span>
+        <button id="open-cash-btn" class="cash-cta" type="button">Cash</button>
       </header>
 
       <div class="cycle-nav">
@@ -100,6 +100,46 @@
       </section>
 
       <ul id="analytics-monthly-list" class="expense-list" hidden></ul>
+    </section>
+
+    <section id="view-cash" class="view" hidden>
+      <header class="app-header">
+        <button id="cash-back-btn" class="icon-btn" type="button" aria-label="Back">←</button>
+        <h1>Cash in Hand</h1>
+        <span class="header-spacer"></span>
+      </header>
+
+      <div class="cycle-nav">
+        <button id="prev-cash-cycle" type="button" aria-label="Previous month">‹</button>
+        <span id="cash-cycle-label" class="cycle-label"></span>
+        <button id="next-cash-cycle" type="button" aria-label="Next month">›</button>
+      </div>
+
+      <section class="total-card">
+        <span class="total-label">Cash in hand</span>
+        <span id="cash-total-amount" class="total-amount">₹0.00</span>
+      </section>
+
+      <ul class="cash-breakdown">
+        <li><span>Carried forward</span><span id="cash-carried">₹0.00</span></li>
+        <li><span>+ Salary</span><span id="cash-salary">₹0.00</span></li>
+        <li><span>− Investment</span><span id="cash-investment-out">₹0.00</span></li>
+        <li><span>− Expenses</span><span id="cash-expenses-out">₹0.00</span></li>
+      </ul>
+
+      <div class="cash-investment-form">
+        <label for="cash-investment-input">Investment this month</label>
+        <div class="cash-investment-row">
+          <input id="cash-investment-input" type="number" min="0" step="0.01" placeholder="₹0" />
+          <button id="cash-investment-save" type="button">Save</button>
+        </div>
+        <p id="cash-investment-status" class="status-message"></p>
+      </div>
+
+      <section class="total-card">
+        <span class="total-label">Total invested (all time)</span>
+        <span id="cash-total-invested" class="total-amount">₹0.00</span>
+      </section>
     </section>
   </main>
 
