@@ -102,25 +102,29 @@ app.post('/api/expenses', requireApiKey, async (req, res) => {
   res.status(201).json(data);
 });
 
-// GET /api/investments -> every month's saved investment amount, for the
-//   Cash in Hand page's running-balance calculation
-app.get('/api/investments', async (req, res) => {
+// GET /api/cash-months -> every month's saved salary + investment amounts,
+//   for the Cash in Hand page's running-balance calculation. Both default
+//   to 0 for any month that's never been explicitly set.
+app.get('/api/cash-months', async (req, res) => {
   const { data, error } = await supabase
     .from('cash_investments')
-    .select('cycle_start, amount')
+    .select('cycle_start, salary, investment')
     .order('cycle_start', { ascending: false });
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ investments: data });
+  res.json({ months: data });
 });
 
-// POST /api/investments  { cycleStart, amount }  -> set (create or overwrite)
-//   that month's investment amount
-app.post('/api/investments', requireApiKey, async (req, res) => {
-  const { cycleStart, amount } = req.body;
+// POST /api/cash-months  { cycleStart, salary, investment }  -> set (create
+//   or overwrite) that month's salary and investment amounts
+app.post('/api/cash-months', requireApiKey, async (req, res) => {
+  const { cycleStart, salary, investment } = req.body;
 
-  if (typeof amount !== 'number' || Number.isNaN(amount)) {
-    return res.status(400).json({ error: 'amount must be a number' });
+  if (typeof salary !== 'number' || Number.isNaN(salary)) {
+    return res.status(400).json({ error: 'salary must be a number' });
+  }
+  if (typeof investment !== 'number' || Number.isNaN(investment)) {
+    return res.status(400).json({ error: 'investment must be a number' });
   }
   if (typeof cycleStart !== 'string' || !cycleStart) {
     return res.status(400).json({ error: 'cycleStart is required' });
@@ -128,7 +132,10 @@ app.post('/api/investments', requireApiKey, async (req, res) => {
 
   const { data, error } = await supabase
     .from('cash_investments')
-    .upsert({ cycle_start: cycleStart, amount, updated_at: new Date().toISOString() }, { onConflict: 'cycle_start' })
+    .upsert(
+      { cycle_start: cycleStart, salary, investment, updated_at: new Date().toISOString() },
+      { onConflict: 'cycle_start' }
+    )
     .select()
     .single();
 

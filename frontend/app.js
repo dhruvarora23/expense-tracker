@@ -11,7 +11,6 @@ const API_KEY = 'exp-tracker-9f3a2c1d7e';
 const PAY_DAY = 7;
 
 const BUDGET_KEY = 'expenseTrackerBudget';
-const SALARY_KEY = 'expenseTrackerSalary';
 
 // ---- Element refs -------------------------------------------------------
 
@@ -53,7 +52,6 @@ const analyticsMonthlyList = document.getElementById('analytics-monthly-list');
 const settingsBtns = document.querySelectorAll('.settings-btn');
 const settingsModal = document.getElementById('settings-modal');
 const budgetInput = document.getElementById('budget-input');
-const salaryInput = document.getElementById('salary-input');
 const settingsSaveBtn = document.getElementById('settings-save');
 const settingsCancelBtn = document.getElementById('settings-cancel');
 
@@ -65,6 +63,7 @@ const cashCarried = document.getElementById('cash-carried');
 const cashSalary = document.getElementById('cash-salary');
 const cashInvestmentOut = document.getElementById('cash-investment-out');
 const cashExpensesOut = document.getElementById('cash-expenses-out');
+const cashSalaryInput = document.getElementById('cash-salary-input');
 const cashInvestmentInput = document.getElementById('cash-investment-input');
 const cashInvestmentSaveBtn = document.getElementById('cash-investment-save');
 const cashInvestmentStatus = document.getElementById('cash-investment-status');
@@ -147,13 +146,13 @@ async function fetchSummary() {
   return data.summary;
 }
 
-async function fetchInvestments() {
-  const res = await fetch(`${API_BASE}/api/investments`);
+async function fetchCashMonths() {
+  const res = await fetch(`${API_BASE}/api/cash-months`);
   const data = await res.json();
-  return data.investments;
+  return data.months;
 }
 
-// ---- Budget / salary (stored locally on this device) ------------------------
+// ---- Budget (stored locally on this device) --------------------------------
 
 function getBudget() {
   const v = parseFloat(localStorage.getItem(BUDGET_KEY));
@@ -162,15 +161,6 @@ function getBudget() {
 
 function setBudget(v) {
   localStorage.setItem(BUDGET_KEY, String(v));
-}
-
-function getSalary() {
-  const v = parseFloat(localStorage.getItem(SALARY_KEY));
-  return Number.isNaN(v) ? 0 : v;
-}
-
-function setSalary(v) {
-  localStorage.setItem(SALARY_KEY, String(v));
 }
 
 // ---- History view (read-only, grouped by date) ------------------------------
@@ -511,28 +501,27 @@ rangeButtons.forEach((btn) => {
 //
 // Cash in hand is a running ledger, carried forward every pay cycle:
 //   this month's cash = last month's leftover + salary − investment − expenses
-// Salary is always the current Settings value, applied uniformly to every
-// month (per how the user described it — not stored per month). Investment
-// is a single editable number per month, stored in the `cash_investments`
-// table. Expenses reuse the same pay-cycle totals already used elsewhere.
+// Both salary and investment are single editable numbers per month, stored
+// in the `cash_investments` table, defaulting to 0 for any month you haven't
+// filled in. Expenses reuse the same pay-cycle totals already used elsewhere.
 
 async function loadCash() {
   const start = cashCycleStart;
   const end = cycleEndForStart(start);
   cashCycleLabel.textContent = formatRangeLabel(start, end);
 
-  const [summary, investments] = await Promise.all([fetchSummary(), fetchInvestments()]);
+  const [summary, months] = await Promise.all([fetchSummary(), fetchCashMonths()]);
   const expenseByMonth = new Map(summary.map((s) => [s.cycleStart, s.total]));
-  const investmentByMonth = new Map(investments.map((i) => [i.cycle_start, Number(i.amount)]));
+  const salaryByMonth = new Map(months.map((m) => [m.cycle_start, Number(m.salary)]));
+  const investmentByMonth = new Map(months.map((m) => [m.cycle_start, Number(m.investment)]));
 
-  const salary = getSalary();
   const targetKey = toISODate(cashCycleStart);
 
   // Walk forward month by month from the earliest month with any data (or
   // the target month itself, if there's no data yet) up to the month being
   // viewed, accumulating the running balance.
   let cursor = cashCycleStart;
-  const allKeys = [...expenseByMonth.keys(), ...investmentByMonth.keys()];
+  const allKeys = [...expenseByMonth.keys(), ...salaryByMonth.keys()];
   if (allKeys.length > 0) {
     const earliestKey = allKeys.sort()[0];
     const earliestDate = new Date(`${earliestKey}T00:00:00`);
@@ -545,6 +534,7 @@ async function loadCash() {
   while (cursor <= cashCycleStart) {
     const key = toISODate(cursor);
     const expense = expenseByMonth.get(key) || 0;
+    const salary = salaryByMonth.get(key) || 0;
     const investment = investmentByMonth.get(key) || 0;
     const carriedIn = balance;
     balance = balance + salary - investment - expense;
@@ -561,23 +551,25 @@ async function loadCash() {
   cashInvestmentOut.textContent = formatMoney(monthBreakdown.investment);
   cashExpensesOut.textContent = formatMoney(monthBreakdown.expense);
 
+  cashSalaryInput.value = salaryByMonth.get(targetKey) || '';
   cashInvestmentInput.value = investmentByMonth.get(targetKey) || '';
 
-  const totalInvested = investments.reduce((sum, i) => sum + Number(i.amount), 0);
+  const totalInvested = months.reduce((sum, m) => sum + Number(m.investment), 0);
   cashTotalInvested.textContent = formatMoney(totalInvested);
 }
 
 cashInvestmentSaveBtn.addEventListener('click', async () => {
-  const amount = parseFloat(cashInvestmentInput.value) || 0;
+  const salary = parseFloat(cashSalaryInput.value) || 0;
+  const investment = parseFloat(cashInvestmentInput.value) || 0;
   cashInvestmentStatus.textContent = 'Saving...';
   try {
-    const res = await fetch(`${API_BASE}/api/investments`, {
+    const res = await fetch(`${API_BASE}/api/cash-months`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': API_KEY,
       },
-      body: JSON.stringify({ cycleStart: toISODate(cashCycleStart), amount }),
+      body: JSON.stringify({ cycleStart: toISODate(cashCycleStart), salary, investment }),
     });
 
     if (!res.ok) {
@@ -629,12 +621,11 @@ tabHistoryBtn.addEventListener('click', () => setActiveView('history'));
 tabTrackBtn.addEventListener('click', () => setActiveView('track'));
 tabAnalyticsBtn.addEventListener('click', () => setActiveView('analytics'));
 
-// ---- Settings / budget / salary --------------------------------------------
+// ---- Settings / budget -----------------------------------------------------
 
 settingsBtns.forEach((btn) => {
   btn.addEventListener('click', () => {
     budgetInput.value = getBudget() || '';
-    salaryInput.value = getSalary() || '';
     settingsModal.hidden = false;
   });
 });
@@ -645,7 +636,6 @@ settingsCancelBtn.addEventListener('click', () => {
 
 settingsSaveBtn.addEventListener('click', () => {
   setBudget(parseFloat(budgetInput.value) || 0);
-  setSalary(parseFloat(salaryInput.value) || 0);
   settingsModal.hidden = true;
   if (!viewHistory.hidden) loadCurrentCycle();
   if (!viewAnalytics.hidden && currentRange === 'month') {

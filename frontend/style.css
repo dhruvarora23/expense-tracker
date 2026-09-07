@@ -413,6 +413,7 @@ body {
 .cash-investment-row {
   display: flex;
   gap: 8px;
+  margin-bottom: 14px;
 }
 
 .cash-investment-row input {
