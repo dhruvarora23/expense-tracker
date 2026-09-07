@@ -28,6 +28,8 @@ const nextCycleBtn = document.getElementById('next-cycle');
 const totalAmount = document.getElementById('total-amount');
 const expenseList = document.getElementById('expense-list');
 const statusMessage = document.getElementById('status-message');
+const budgetLeftBar = document.getElementById('budget-left-bar');
+const budgetLeftAmount = document.getElementById('budget-left-amount');
 
 const trackAmountDisplay = document.getElementById('track-amount-display');
 const trackNoteInput = document.getElementById('track-note');
@@ -157,6 +159,7 @@ async function loadCurrentCycle() {
   try {
     const data = await fetchTotalForRange(start, end);
     renderExpenses(data.expenses, data.total);
+    budgetLeftAmount.textContent = formatMoney(getBudget() - data.total);
     statusMessage.textContent = '';
   } catch (err) {
     statusMessage.textContent = 'Could not reach the server. Is the backend running?';
@@ -485,6 +488,7 @@ function setActiveView(view) {
   viewHistory.hidden = view !== 'history';
   viewTrack.hidden = view !== 'track';
   viewAnalytics.hidden = view !== 'analytics';
+  budgetLeftBar.hidden = view !== 'history';
   tabHistoryBtn.classList.toggle('active', view === 'history');
   tabTrackBtn.classList.toggle('active', view === 'track');
   tabAnalyticsBtn.classList.toggle('active', view === 'analytics');
@@ -515,6 +519,7 @@ settingsSaveBtn.addEventListener('click', () => {
   setBudget(parseFloat(budgetInput.value) || 0);
   setSalary(parseFloat(salaryInput.value) || 0);
   settingsModal.hidden = true;
+  if (!viewHistory.hidden) loadCurrentCycle();
   if (!viewAnalytics.hidden && currentRange === 'month') {
     loadAnalytics();
   }
@@ -525,8 +530,7 @@ settingsSaveBtn.addEventListener('click', () => {
 updateRangeButtonsUI();
 updateTrackDisplay();
 updateTrackDatePlaceholder();
-tabHistoryBtn.classList.add('active');
-loadCurrentCycle();
+setActiveView('history');
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');

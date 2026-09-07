@@ -103,20 +103,27 @@
     </section>
   </main>
 
-  <nav class="bottom-nav">
-    <button id="tab-history" class="nav-btn" data-view="history" type="button">
-      <span class="nav-icon">🕘</span>
-      <span>History</span>
-    </button>
-    <button id="tab-track" class="nav-btn" data-view="track" type="button">
-      <span class="nav-icon">➕</span>
-      <span>Track</span>
-    </button>
-    <button id="tab-analytics" class="nav-btn" data-view="analytics" type="button">
-      <span class="nav-icon">📊</span>
-      <span>Analytics</span>
-    </button>
-  </nav>
+  <div class="bottom-footer">
+    <div id="budget-left-bar" class="budget-left-bar" hidden>
+      <span>Budget left</span>
+      <span id="budget-left-amount">₹0.00</span>
+    </div>
+
+    <nav class="bottom-nav">
+      <button id="tab-history" class="nav-btn" data-view="history" type="button">
+        <span class="nav-icon">🕘</span>
+        <span>History</span>
+      </button>
+      <button id="tab-track" class="nav-btn" data-view="track" type="button">
+        <span class="nav-icon">➕</span>
+        <span>Track</span>
+      </button>
+      <button id="tab-analytics" class="nav-btn" data-view="analytics" type="button">
+        <span class="nav-icon">📊</span>
+        <span>Analytics</span>
+      </button>
+    </nav>
+  </div>
 
   <div id="settings-modal" class="modal-overlay" hidden>
     <div class="modal">
