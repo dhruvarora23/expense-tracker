@@ -73,6 +73,7 @@ const cashInvestmentStatus = document.getElementById('cash-investment-status');
 const cashTotalInvested = document.getElementById('cash-total-invested');
 
 const holdingsTotalInvested = document.getElementById('holdings-total-invested');
+const holdingsTotalCurrentValue = document.getElementById('holdings-total-current-value');
 const holdingForm = document.getElementById('holding-form');
 const holdingNameInput = document.getElementById('holding-name');
 const holdingAmountInput = document.getElementById('holding-amount');
@@ -264,7 +265,7 @@ function closeSwipeItem(el) {
   if (openSwipeItem === el) openSwipeItem = null;
 }
 
-function attachSwipeToDelete(contentEl, deleteBtn, onDelete, onTap) {
+function attachSwipeToDelete(contentEl, deleteBtn, onDelete) {
   let startX = 0;
   let startY = 0;
   let startTranslate = 0;
@@ -327,17 +328,93 @@ function attachSwipeToDelete(contentEl, deleteBtn, onDelete, onTap) {
 
   // Tapping the content while it's open just closes it, instead of doing
   // nothing — a natural way to dismiss without hitting the delete button.
-  // Otherwise (not open), a tap can trigger an optional callback, e.g. to
-  // open an item for editing.
   contentEl.addEventListener('click', () => {
-    if (contentEl.dataset.open === 'true') {
+    if (contentEl.dataset.open === 'true') closeSwipeItem(contentEl);
+  });
+
+  deleteBtn.addEventListener('click', () => onDelete(deleteBtn.dataset.id));
+}
+
+// Bidirectional variant: swipe left reveals Delete (right side, as above),
+// swipe right reveals Edit (left side). Used on the Breakdown/holdings list.
+function attachSwipeEditDelete(contentEl, { deleteBtn, onDelete, editBtn, onEdit }) {
+  let startX = 0;
+  let startY = 0;
+  let startTranslate = 0;
+  let dragging = false;
+  let isHorizontal = null;
+
+  function currentTranslate() {
+    const match = /translateX\((-?\d+(?:\.\d+)?)px\)/.exec(contentEl.style.transform);
+    return match ? parseFloat(match[1]) : 0;
+  }
+
+  contentEl.addEventListener(
+    'touchstart',
+    (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startTranslate = currentTranslate();
+      dragging = true;
+      isHorizontal = null;
+    },
+    { passive: true }
+  );
+
+  contentEl.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!dragging) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+
+      if (isHorizontal === null) {
+        isHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+      if (!isHorizontal) return;
+
+      e.preventDefault();
+      const next = Math.max(-SWIPE_REVEAL, Math.min(SWIPE_REVEAL, startTranslate + dx));
+      contentEl.style.transition = 'none';
+      contentEl.style.transform = `translateX(${next}px)`;
+    },
+    { passive: false }
+  );
+
+  contentEl.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    contentEl.style.transition = '';
+    if (!isHorizontal) return;
+
+    const translate = currentTranslate();
+    if (openSwipeItem && openSwipeItem !== contentEl) closeSwipeItem(openSwipeItem);
+
+    if (translate < -SWIPE_REVEAL / 2) {
+      contentEl.style.transform = `translateX(-${SWIPE_REVEAL}px)`;
+      contentEl.dataset.open = 'delete';
+      openSwipeItem = contentEl;
+    } else if (translate > SWIPE_REVEAL / 2) {
+      contentEl.style.transform = `translateX(${SWIPE_REVEAL}px)`;
+      contentEl.dataset.open = 'edit';
+      openSwipeItem = contentEl;
+    } else {
       closeSwipeItem(contentEl);
-    } else if (onTap) {
-      onTap();
+    }
+  });
+
+  // Tapping the content while it's open just closes it.
+  contentEl.addEventListener('click', () => {
+    if (contentEl.dataset.open === 'delete' || contentEl.dataset.open === 'edit') {
+      closeSwipeItem(contentEl);
     }
   });
 
   deleteBtn.addEventListener('click', () => onDelete(deleteBtn.dataset.id));
+  editBtn.addEventListener('click', () => {
+    closeSwipeItem(contentEl);
+    onEdit();
+  });
 }
 
 async function deleteExpense(id) {
@@ -641,6 +718,9 @@ async function loadHoldings() {
   const totalInvested = months.reduce((sum, m) => sum + Number(m.investment), 0);
   holdingsTotalInvested.textContent = formatMoney(totalInvested);
 
+  const totalCurrentValue = holdings.reduce((sum, h) => sum + Number(h.current_value), 0);
+  holdingsTotalCurrentValue.textContent = formatMoney(totalCurrentValue);
+
   holdingsList.innerHTML = '';
   if (holdings.length === 0) {
     holdingsList.innerHTML = '<div class="expense-item">No holdings added yet.</div>';
@@ -657,6 +737,9 @@ async function loadHoldings() {
     const li = document.createElement('li');
     li.className = 'expense-item-wrapper';
     li.innerHTML = `
+      <div class="expense-item-actions-left">
+        <button class="edit-btn">Edit</button>
+      </div>
       <div class="expense-item-actions">
         <button class="delete-btn" data-id="${h.id}">Delete</button>
       </div>
@@ -675,7 +758,13 @@ async function loadHoldings() {
 
     const content = li.querySelector('.expense-item');
     const deleteBtn = li.querySelector('.delete-btn');
-    attachSwipeToDelete(content, deleteBtn, deleteHolding, () => startEditingHolding(h));
+    const editBtn = li.querySelector('.edit-btn');
+    attachSwipeEditDelete(content, {
+      deleteBtn,
+      onDelete: deleteHolding,
+      editBtn,
+      onEdit: () => startEditingHolding(h),
+    });
   }
 }
 

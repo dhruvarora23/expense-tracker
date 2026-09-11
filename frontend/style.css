@@ -326,6 +326,28 @@ body {
   font-weight: 600;
 }
 
+.expense-item-actions-left {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 84px;
+  display: flex;
+  background: var(--accent);
+  overflow: hidden;
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+.expense-item-actions-left .edit-btn {
+  flex: 1;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .expense-item {
   position: relative;
   background: var(--surface);
@@ -444,6 +466,7 @@ body {
 }
 
 .link-btn {
+  display: block;
   background: none;
   border: none;
   color: var(--accent);
@@ -451,6 +474,11 @@ body {
   font-weight: 600;
   text-decoration: underline;
   padding: 0;
+  margin-top: -8px;
+}
+
+.cash-investment-form .status-message:empty {
+  min-height: 0;
 }
 
 .holding-form {
