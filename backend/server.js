@@ -143,6 +143,80 @@ app.post('/api/cash-months', requireApiKey, async (req, res) => {
   res.status(200).json(data);
 });
 
+// GET /api/holdings -> every investment holding, for the Breakdown screen
+app.get('/api/holdings', async (req, res) => {
+  const { data, error } = await supabase
+    .from('investment_holdings')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ holdings: data });
+});
+
+app.post('/api/holdings', requireApiKey, async (req, res) => {
+  const { name, amount, currentValue } = req.body;
+
+  if (typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'name is required' });
+  }
+  if (typeof amount !== 'number' || Number.isNaN(amount)) {
+    return res.status(400).json({ error: 'amount must be a number' });
+  }
+  if (typeof currentValue !== 'number' || Number.isNaN(currentValue)) {
+    return res.status(400).json({ error: 'currentValue must be a number' });
+  }
+
+  const { data, error } = await supabase
+    .from('investment_holdings')
+    .insert({ name: name.trim(), amount, current_value: currentValue })
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
+});
+
+app.put('/api/holdings/:id', requireApiKey, async (req, res) => {
+  const { name, amount, currentValue } = req.body;
+
+  if (typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'name is required' });
+  }
+  if (typeof amount !== 'number' || Number.isNaN(amount)) {
+    return res.status(400).json({ error: 'amount must be a number' });
+  }
+  if (typeof currentValue !== 'number' || Number.isNaN(currentValue)) {
+    return res.status(400).json({ error: 'currentValue must be a number' });
+  }
+
+  const { data, error } = await supabase
+    .from('investment_holdings')
+    .update({ name: name.trim(), amount, current_value: currentValue })
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'Holding not found' });
+  res.json(data);
+});
+
+app.delete('/api/holdings/:id', requireApiKey, async (req, res) => {
+  const { data, error } = await supabase
+    .from('investment_holdings')
+    .delete()
+    .eq('id', req.params.id)
+    .select();
+
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data || data.length === 0) {
+    return res.status(404).json({ error: 'Holding not found' });
+  }
+
+  res.status(204).send();
+});
+
 app.delete('/api/expenses/:id', requireApiKey, async (req, res) => {
   const { data, error } = await supabase
     .from('expenses')

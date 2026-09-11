@@ -18,11 +18,14 @@ const viewHistory = document.getElementById('view-history');
 const viewTrack = document.getElementById('view-track');
 const viewAnalytics = document.getElementById('view-analytics');
 const viewCash = document.getElementById('view-cash');
+const viewHoldings = document.getElementById('view-holdings');
 const tabHistoryBtn = document.getElementById('tab-history');
 const tabTrackBtn = document.getElementById('tab-track');
 const tabAnalyticsBtn = document.getElementById('tab-analytics');
 const openCashBtn = document.getElementById('open-cash-btn');
 const cashBackBtn = document.getElementById('cash-back-btn');
+const openHoldingsBtn = document.getElementById('open-holdings-btn');
+const holdingsBackBtn = document.getElementById('holdings-back-btn');
 
 const cycleLabel = document.getElementById('cycle-label');
 const prevCycleBtn = document.getElementById('prev-cycle');
@@ -69,6 +72,16 @@ const cashInvestmentSaveBtn = document.getElementById('cash-investment-save');
 const cashInvestmentStatus = document.getElementById('cash-investment-status');
 const cashTotalInvested = document.getElementById('cash-total-invested');
 
+const holdingsTotalInvested = document.getElementById('holdings-total-invested');
+const holdingForm = document.getElementById('holding-form');
+const holdingNameInput = document.getElementById('holding-name');
+const holdingAmountInput = document.getElementById('holding-amount');
+const holdingCurrentValueInput = document.getElementById('holding-current-value');
+const holdingSubmitBtn = document.getElementById('holding-submit');
+const holdingCancelEditBtn = document.getElementById('holding-cancel-edit');
+const holdingStatus = document.getElementById('holding-status');
+const holdingsList = document.getElementById('holdings-list');
+
 // ---- State ---------------------------------------------------------------
 
 // The pay cycle currently on screen in History, tracked as its start date.
@@ -78,6 +91,9 @@ let trackAmountStr = '';
 
 // The pay cycle currently on screen in Cash in Hand.
 let cashCycleStart = cycleStartForDate(new Date());
+
+// Non-null while editing an existing holding on the Breakdown screen.
+let editingHoldingId = null;
 
 // ---- Date helpers ----------------------------------------------------------
 
@@ -150,6 +166,12 @@ async function fetchCashMonths() {
   const res = await fetch(`${API_BASE}/api/cash-months`);
   const data = await res.json();
   return data.months;
+}
+
+async function fetchHoldings() {
+  const res = await fetch(`${API_BASE}/api/holdings`);
+  const data = await res.json();
+  return data.holdings;
 }
 
 // ---- Budget (stored locally on this device) --------------------------------
@@ -227,7 +249,7 @@ function renderExpenses(expenses, total) {
 
     const content = li.querySelector('.expense-item');
     const deleteBtn = li.querySelector('.delete-btn');
-    attachSwipeToDelete(content, deleteBtn);
+    attachSwipeToDelete(content, deleteBtn, deleteExpense);
   }
 }
 
@@ -242,7 +264,7 @@ function closeSwipeItem(el) {
   if (openSwipeItem === el) openSwipeItem = null;
 }
 
-function attachSwipeToDelete(contentEl, deleteBtn) {
+function attachSwipeToDelete(contentEl, deleteBtn, onDelete, onTap) {
   let startX = 0;
   let startY = 0;
   let startTranslate = 0;
@@ -305,11 +327,17 @@ function attachSwipeToDelete(contentEl, deleteBtn) {
 
   // Tapping the content while it's open just closes it, instead of doing
   // nothing — a natural way to dismiss without hitting the delete button.
+  // Otherwise (not open), a tap can trigger an optional callback, e.g. to
+  // open an item for editing.
   contentEl.addEventListener('click', () => {
-    if (contentEl.dataset.open === 'true') closeSwipeItem(contentEl);
+    if (contentEl.dataset.open === 'true') {
+      closeSwipeItem(contentEl);
+    } else if (onTap) {
+      onTap();
+    }
   });
 
-  deleteBtn.addEventListener('click', () => deleteExpense(deleteBtn.dataset.id));
+  deleteBtn.addEventListener('click', () => onDelete(deleteBtn.dataset.id));
 }
 
 async function deleteExpense(id) {
@@ -600,6 +628,131 @@ nextCashCycleBtn.addEventListener('click', () => {
 openCashBtn.addEventListener('click', () => setActiveView('cash'));
 cashBackBtn.addEventListener('click', () => setActiveView('history'));
 
+// ---- Investment breakdown (Holdings) view -----------------------------------
+//
+// A flat, always-editable list of named holdings — not tied to a specific
+// month. The "Total invested (all time)" shown here reuses the same figure
+// already computed on the Cash page (sum of every month's investment entry)
+// rather than summing holdings separately, so the two screens can never
+// show conflicting totals.
+
+async function loadHoldings() {
+  const [months, holdings] = await Promise.all([fetchCashMonths(), fetchHoldings()]);
+  const totalInvested = months.reduce((sum, m) => sum + Number(m.investment), 0);
+  holdingsTotalInvested.textContent = formatMoney(totalInvested);
+
+  holdingsList.innerHTML = '';
+  if (holdings.length === 0) {
+    holdingsList.innerHTML = '<div class="expense-item">No holdings added yet.</div>';
+    return;
+  }
+
+  for (const h of holdings) {
+    const amount = Number(h.amount);
+    const currentValue = Number(h.current_value);
+    const gain = currentValue - amount;
+    const gainClass = gain > 0 ? 'gain' : gain < 0 ? 'loss' : '';
+    const gainSign = gain > 0 ? '+' : '';
+
+    const li = document.createElement('li');
+    li.className = 'expense-item-wrapper';
+    li.innerHTML = `
+      <div class="expense-item-actions">
+        <button class="delete-btn" data-id="${h.id}">Delete</button>
+      </div>
+      <div class="expense-item holding-item">
+        <div class="meta">
+          <span class="category">${h.name}</span>
+          <span class="date">Invested ${formatMoney(amount)}</span>
+        </div>
+        <div class="amount-values">
+          <span class="amount">${formatMoney(currentValue)}</span>
+          <span class="current-value ${gainClass}">${gainSign}${formatMoney(gain)}</span>
+        </div>
+      </div>
+    `;
+    holdingsList.appendChild(li);
+
+    const content = li.querySelector('.expense-item');
+    const deleteBtn = li.querySelector('.delete-btn');
+    attachSwipeToDelete(content, deleteBtn, deleteHolding, () => startEditingHolding(h));
+  }
+}
+
+function startEditingHolding(holding) {
+  editingHoldingId = holding.id;
+  holdingNameInput.value = holding.name;
+  holdingAmountInput.value = holding.amount;
+  holdingCurrentValueInput.value = holding.current_value;
+  holdingSubmitBtn.textContent = 'Update';
+  holdingCancelEditBtn.hidden = false;
+  holdingNameInput.focus();
+}
+
+function stopEditingHolding() {
+  editingHoldingId = null;
+  holdingForm.reset();
+  holdingSubmitBtn.textContent = 'Add';
+  holdingCancelEditBtn.hidden = true;
+}
+
+holdingCancelEditBtn.addEventListener('click', stopEditingHolding);
+
+holdingForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const name = holdingNameInput.value.trim();
+  const amount = parseFloat(holdingAmountInput.value) || 0;
+  const currentValue = parseFloat(holdingCurrentValueInput.value) || 0;
+
+  if (!name) {
+    holdingStatus.textContent = 'Enter a name first';
+    return;
+  }
+
+  holdingStatus.textContent = 'Saving...';
+  try {
+    const url = editingHoldingId
+      ? `${API_BASE}/api/holdings/${editingHoldingId}`
+      : `${API_BASE}/api/holdings`;
+    const method = editingHoldingId ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+      },
+      body: JSON.stringify({ name, amount, currentValue }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to save');
+    }
+
+    holdingStatus.textContent = '';
+    stopEditingHolding();
+    loadHoldings();
+  } catch (err) {
+    holdingStatus.textContent = err.message;
+  }
+});
+
+async function deleteHolding(id) {
+  await fetch(`${API_BASE}/api/holdings/${id}`, {
+    method: 'DELETE',
+    headers: { 'x-api-key': API_KEY },
+  });
+  loadHoldings();
+}
+
+openHoldingsBtn.addEventListener('click', () => setActiveView('holdings'));
+holdingsBackBtn.addEventListener('click', () => {
+  stopEditingHolding();
+  setActiveView('cash');
+});
+
 // ---- Bottom tab navigation ---------------------------------------------------
 
 function setActiveView(view) {
@@ -607,6 +760,7 @@ function setActiveView(view) {
   viewTrack.hidden = view !== 'track';
   viewAnalytics.hidden = view !== 'analytics';
   viewCash.hidden = view !== 'cash';
+  viewHoldings.hidden = view !== 'holdings';
   budgetLeftBar.hidden = view !== 'history';
   tabHistoryBtn.classList.toggle('active', view === 'history');
   tabTrackBtn.classList.toggle('active', view === 'track');
@@ -615,6 +769,7 @@ function setActiveView(view) {
   if (view === 'history') loadCurrentCycle();
   if (view === 'analytics') loadAnalytics();
   if (view === 'cash') loadCash();
+  if (view === 'holdings') loadHoldings();
 }
 
 tabHistoryBtn.addEventListener('click', () => setActiveView('history'));
