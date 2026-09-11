@@ -214,6 +214,23 @@
     </div>
   </div>
 
+  <div id="edit-expense-modal" class="modal-overlay" hidden>
+    <div class="modal">
+      <h2>Edit Expense</h2>
+      <label for="edit-expense-amount">Amount</label>
+      <input id="edit-expense-amount" type="number" min="0" step="0.01" />
+      <label for="edit-expense-note">Note</label>
+      <input id="edit-expense-note" type="text" placeholder="Note (optional)" />
+      <label for="edit-expense-date">Date</label>
+      <input id="edit-expense-date" type="date" />
+      <p id="edit-expense-status" class="status-message"></p>
+      <div class="modal-actions">
+        <button id="edit-expense-cancel" type="button" class="secondary">Cancel</button>
+        <button id="edit-expense-save" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

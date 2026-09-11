@@ -102,6 +102,28 @@ app.post('/api/expenses', requireApiKey, async (req, res) => {
   res.status(201).json(data);
 });
 
+app.put('/api/expenses/:id', requireApiKey, async (req, res) => {
+  const { amount, date, note } = req.body;
+
+  if (typeof amount !== 'number' || Number.isNaN(amount)) {
+    return res.status(400).json({ error: 'amount must be a number' });
+  }
+  if (typeof date !== 'string' || !date) {
+    return res.status(400).json({ error: 'date is required' });
+  }
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .update({ amount, note: note || '', date })
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'Expense not found' });
+  res.json(data);
+});
+
 // GET /api/cash-months -> every month's saved salary + investment amounts,
 //   for the Cash in Hand page's running-balance calculation. Both default
 //   to 0 for any month that's never been explicitly set.

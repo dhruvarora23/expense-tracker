@@ -58,6 +58,14 @@ const budgetInput = document.getElementById('budget-input');
 const settingsSaveBtn = document.getElementById('settings-save');
 const settingsCancelBtn = document.getElementById('settings-cancel');
 
+const editExpenseModal = document.getElementById('edit-expense-modal');
+const editExpenseAmount = document.getElementById('edit-expense-amount');
+const editExpenseNote = document.getElementById('edit-expense-note');
+const editExpenseDate = document.getElementById('edit-expense-date');
+const editExpenseStatus = document.getElementById('edit-expense-status');
+const editExpenseSaveBtn = document.getElementById('edit-expense-save');
+const editExpenseCancelBtn = document.getElementById('edit-expense-cancel');
+
 const prevCashCycleBtn = document.getElementById('prev-cash-cycle');
 const nextCashCycleBtn = document.getElementById('next-cash-cycle');
 const cashCycleLabel = document.getElementById('cash-cycle-label');
@@ -95,6 +103,9 @@ let cashCycleStart = cycleStartForDate(new Date());
 
 // Non-null while editing an existing holding on the Breakdown screen.
 let editingHoldingId = null;
+
+// Non-null while the Edit Expense modal is open.
+let editingExpenseId = null;
 
 // ---- Date helpers ----------------------------------------------------------
 
@@ -234,6 +245,9 @@ function renderExpenses(expenses, total) {
     const li = document.createElement('li');
     li.className = 'expense-item-wrapper';
     li.innerHTML = `
+      <div class="expense-item-actions-left">
+        <button class="edit-btn">Edit</button>
+      </div>
       <div class="expense-item-actions">
         <button class="delete-btn" data-id="${e.id}">Delete</button>
       </div>
@@ -250,7 +264,13 @@ function renderExpenses(expenses, total) {
 
     const content = li.querySelector('.expense-item');
     const deleteBtn = li.querySelector('.delete-btn');
-    attachSwipeToDelete(content, deleteBtn, deleteExpense);
+    const editBtn = li.querySelector('.edit-btn');
+    attachSwipeEditDelete(content, {
+      deleteBtn,
+      onDelete: deleteExpense,
+      editBtn,
+      onEdit: () => startEditingExpense(e),
+    });
   }
 }
 
@@ -265,78 +285,8 @@ function closeSwipeItem(el) {
   if (openSwipeItem === el) openSwipeItem = null;
 }
 
-function attachSwipeToDelete(contentEl, deleteBtn, onDelete) {
-  let startX = 0;
-  let startY = 0;
-  let startTranslate = 0;
-  let dragging = false;
-  let isHorizontal = null;
-
-  function currentTranslate() {
-    const match = /translateX\((-?\d+(?:\.\d+)?)px\)/.exec(contentEl.style.transform);
-    return match ? parseFloat(match[1]) : 0;
-  }
-
-  contentEl.addEventListener(
-    'touchstart',
-    (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      startTranslate = currentTranslate();
-      dragging = true;
-      isHorizontal = null;
-    },
-    { passive: true }
-  );
-
-  contentEl.addEventListener(
-    'touchmove',
-    (e) => {
-      if (!dragging) return;
-      const dx = e.touches[0].clientX - startX;
-      const dy = e.touches[0].clientY - startY;
-
-      if (isHorizontal === null) {
-        isHorizontal = Math.abs(dx) > Math.abs(dy);
-      }
-      if (!isHorizontal) return;
-
-      e.preventDefault();
-      const next = Math.max(-SWIPE_REVEAL, Math.min(0, startTranslate + dx));
-      contentEl.style.transition = 'none';
-      contentEl.style.transform = `translateX(${next}px)`;
-    },
-    { passive: false }
-  );
-
-  contentEl.addEventListener('touchend', () => {
-    if (!dragging) return;
-    dragging = false;
-    contentEl.style.transition = '';
-    if (!isHorizontal) return;
-
-    const shouldOpen = currentTranslate() < -SWIPE_REVEAL / 2;
-    if (shouldOpen) {
-      if (openSwipeItem && openSwipeItem !== contentEl) closeSwipeItem(openSwipeItem);
-      contentEl.style.transform = `translateX(-${SWIPE_REVEAL}px)`;
-      contentEl.dataset.open = 'true';
-      openSwipeItem = contentEl;
-    } else {
-      closeSwipeItem(contentEl);
-    }
-  });
-
-  // Tapping the content while it's open just closes it, instead of doing
-  // nothing — a natural way to dismiss without hitting the delete button.
-  contentEl.addEventListener('click', () => {
-    if (contentEl.dataset.open === 'true') closeSwipeItem(contentEl);
-  });
-
-  deleteBtn.addEventListener('click', () => onDelete(deleteBtn.dataset.id));
-}
-
-// Bidirectional variant: swipe left reveals Delete (right side, as above),
-// swipe right reveals Edit (left side). Used on the Breakdown/holdings list.
+// Swipe left reveals Delete (right side); swipe right reveals Edit (left
+// side). Used for both the History list and the Breakdown/holdings list.
 function attachSwipeEditDelete(contentEl, { deleteBtn, onDelete, editBtn, onEdit }) {
   let startX = 0;
   let startY = 0;
@@ -424,6 +374,58 @@ async function deleteExpense(id) {
   });
   loadCurrentCycle();
 }
+
+function startEditingExpense(expense) {
+  editingExpenseId = expense.id;
+  editExpenseAmount.value = expense.amount;
+  editExpenseNote.value = expense.note || '';
+  editExpenseDate.value = expense.date;
+  editExpenseStatus.textContent = '';
+  editExpenseModal.hidden = false;
+}
+
+editExpenseCancelBtn.addEventListener('click', () => {
+  editExpenseModal.hidden = true;
+  editingExpenseId = null;
+});
+
+editExpenseSaveBtn.addEventListener('click', async () => {
+  const amount = parseFloat(editExpenseAmount.value);
+  const note = editExpenseNote.value;
+  const date = editExpenseDate.value;
+
+  if (Number.isNaN(amount) || amount <= 0) {
+    editExpenseStatus.textContent = 'Enter a valid amount';
+    return;
+  }
+  if (!date) {
+    editExpenseStatus.textContent = 'Pick a date';
+    return;
+  }
+
+  editExpenseStatus.textContent = 'Saving...';
+  try {
+    const res = await fetch(`${API_BASE}/api/expenses/${editingExpenseId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+      },
+      body: JSON.stringify({ amount, note, date }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to save');
+    }
+
+    editExpenseModal.hidden = true;
+    editingExpenseId = null;
+    loadCurrentCycle();
+  } catch (err) {
+    editExpenseStatus.textContent = err.message;
+  }
+});
 
 prevCycleBtn.addEventListener('click', () => {
   currentCycleStart = new Date(
