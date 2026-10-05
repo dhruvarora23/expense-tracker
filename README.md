@@ -67,7 +67,7 @@ alter table expenses enable row level security;
 4. Add action **"Get Contents of URL"**:
    - URL: `https://expense-tracker-7vtl.onrender.com/api/expenses`
    - Method: `POST`
-   - Headers: `Content-Type: application/json`, `x-api-key: exp-tracker-9f3a2c1d7e`
+   - Headers: `Content-Type: application/json`, `x-api-key:`
    - Request Body: JSON —
      ```json
      { "amount": <Ask for Input (Amount)>, "note": <Ask for Input (Note)> }
